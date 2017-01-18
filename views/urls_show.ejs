@@ -11,9 +11,14 @@
     <% include ../views/partials/_header %>
   </header>
 
-  <h1> The full URL and its shortened form</h1>
-  <p><%= shortURL %></p>
-  <p><%= fullURL %></p>
+  <h1>ShortURL: <%= shortURL %></h1>
+  <p>CurrentURL: <%= fullURL %></p>
+
+  <form action="/urls/<%= shortURL %>/update" method="POST">
+    <label for="newURL">Enter new URL:</label>
+    <input id="newURL" type="text" name="newURL" placeholder="http://" style="width: 300px">
+    <input type="submit" value="Update">
+  </form>
 
 
 </body>
