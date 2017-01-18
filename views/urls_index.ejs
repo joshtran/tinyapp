@@ -16,9 +16,15 @@
     <ul>
       <% for (var key in urls) { %>
         <li><%= key %> : <%= urls[key] %></li>
+        <form method="POST" action="/urls/<%= key %>/delete" style="margin-bottom: 20px;">
+          <input type="submit" value="Delete">
+        </form>
       <% }; %>
+
     </ul>
+
     <a href="shorten.html">Link to shorten a new URL</a>
+
 
 </body>
 </html>
