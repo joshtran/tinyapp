@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+  <title>TinyApp</title>
+</head>
+
+<body>
+  <header>
+    <% include ../views/partials/_header %>
+  </header>
+
+  <h1> URLs & Shortened forms</h1>
+
+    <ul>
+      <% for (var key in urls) { %>
+        <li><%= key %> : <%= urls[key] %></li>
+      <% }; %>
+    </ul>
+    <a href="shorten.html">Link to shorten a new URL</a>
+
+</body>
+</html>
