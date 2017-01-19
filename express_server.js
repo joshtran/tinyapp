@@ -9,10 +9,20 @@ app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
 
-//Database
+//URL Database
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
+};
+
+//User Database
+const users = {
+  "test-1": {
+    id: "test-1",
+    email: "jondoe@example.com",
+    password: "testpass"
+  },
+
 };
 
 //Generate short URL
@@ -29,13 +39,73 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new", templateVars);
 });
 
+app.get("/register", (req, res) => {
+  let templateVars = {
+  username: req.cookies["username"],
+  };
+  res.render("urls_register", templateVars);
+});
+
+
+app.post("/register", (req, res) => {
+  let newID = generateRandomString();
+  res.cookie("user_id", newID);
+  let newEmail = req.body.email;
+  let newPass = req.body.password;
+
+  for (key in users) {
+    let existingEmail = users[key].email;
+    if (newEmail === "" || newPass === "" || newEmail === existingEmail) {
+      res.sendStatus(400);
+    } else {
+      users[newID] = {
+        "id" : newID,
+        "email" : newEmail,
+        "password" : newPass
+        };
+      // console.log(users);
+      res.redirect("/");
+    }
+  }
+
+});
+
+app.get("/login", (req, res) => {
+  let templateVars = {
+  username: req.cookies["username"],
+  };
+  res.render("urls_login", templateVars);
+});
+
 app.post("/login", (req, res) => {
-  res.cookie("username", req.body.username);
-  res.redirect("/");
+  let loginEmail = req.body.email;
+  let loginPass = req.body.password;
+  let notFound = true;
+
+  for (key in users) {
+    let existingEmail = users[key].email;
+    let existingPass = users[key].password;
+    let existingID = users[key].id;
+    if (loginEmail === existingEmail) {
+      notFound = false;
+      if (loginPass === existingPass){
+        res.cookie("user_id", existingID);
+        res.redirect("/");
+      } else {
+        res.sendStatus(403);
+      }
+    }
+  }
+
+  if (notFound === true) {
+    res.sendStatus(403);
+  };
+
 });
 
 app.post("/logout", (req, res) => {
   res.clearCookie("username");
+  res.clearCookie("user_id");
   res.redirect("/");
 });
 
@@ -66,9 +136,15 @@ app.get("/u/:shortURL", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
+  let currentUser = users[req.cookies["user_id"]];
+  let currentEmail = null;
+  if (currentUser) {
+    currentEmail = currentUser.email
+  };
   let templateVars = {
     urls: urlDatabase,
-    username: req.cookies["username"]
+    username: req.cookies["username"],
+    userEmail: currentEmail
   };
   res.render("urls_index", templateVars);
 });
@@ -77,7 +153,7 @@ app.get("/urls/:id", (req, res) => {
   let templateVars = {
     shortURL: req.params.id,
     fullURL: urlDatabase[req.params.id],
-    username: req.cookies["username"]
+    username: req.cookies["username"],
   };;
   res.render("urls_show", templateVars);
 });
