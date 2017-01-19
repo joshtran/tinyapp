@@ -1,6 +1,7 @@
 const bodyParser = require("body-parser");
 const express = require("express");
 const cookieParser = require('cookie-parser')
+const bcrypt = require("bcrypt");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
@@ -22,7 +23,7 @@ const users = {
   "test-1": {
     id: "test-1",
     email: "jondoe@example.com",
-    password: "testpass"
+    password: bcrypt.hashSync("testpass", 10)
   },
 
 };
@@ -77,24 +78,34 @@ app.get("/register", (req, res) => {
 
 //Register new user and add to users object
 app.post("/register", (req, res) => {
-  let newID = generateRandomString();
-  res.cookie("user_id", newID);
-  let newEmail = req.body.email;
-  let newPass = req.body.password;
+  const shortenedURL = generateRandomString();
+  let currentInfo = checkLogin(req.cookies["user_id"]);
+  let currentLoginStatus = currentInfo.loggedIn;
 
-  for (key in users) {
-    let existingEmail = users[key].email;
-    if (newEmail === "" || newPass === "" || newEmail === existingEmail) {
-      res.sendStatus(400);
-    } else {
-      users[newID] = {
-        "id" : newID,
-        "email" : newEmail,
-        "password" : newPass
-        };
-      res.redirect("/");
+  if (!currentLoginStatus) {
+
+    let newID = generateRandomString();
+    res.cookie("user_id", newID);
+    const newEmail = req.body.email;
+    const newPass = bcrypt.hashSync(req.body.password, 10);
+
+    for (key in users) {
+      let existingEmail = users[key].email;
+      if (newEmail === "" || newPass === "" || newEmail === existingEmail) {
+        res.sendStatus(400);
+      } else {
+        users[newID] = {
+          "id" : newID,
+          "email" : newEmail,
+          "password" : newPass
+          };
+        res.redirect("/");
+      }
     }
+  } else {
+    res.send("You're already logged in.")
   }
+
 });
 
 //Login page
@@ -107,33 +118,42 @@ app.get("/login", (req, res) => {
 
 //Log user into tinyapp
 app.post("/login", (req, res) => {
-  let loginEmail = req.body.email;
-  let loginPass = req.body.password;
-  let notFound = true;
+  const shortenedURL = generateRandomString();
+  let currentInfo = checkLogin(req.cookies["user_id"]);
+  let currentLoginStatus = currentInfo.loggedIn;
 
-  for (key in users) {
+  if (!currentLoginStatus) {
 
-    let existingEmail = users[key].email;
-    let existingPass = users[key].password;
-    let existingID = users[key].id;
 
-    if (loginEmail === existingEmail) {
-      notFound = false;
+    let loginEmail = req.body.email;
+    let loginPass = req.body.password;
+    let notFound = true;
 
-      if (loginPass === existingPass){
-        res.cookie("user_id", existingID);
-        res.redirect("/");
-      } else {
-        res.sendStatus(403);
+    for (key in users) {
+
+      let existingEmail = users[key].email;
+      let existingPass = users[key].password;
+      let existingID = users[key].id;
+
+      if (loginEmail === existingEmail) {
+        notFound = false;
+
+        if (bcrypt.compareSync(loginPass, existingPass)) {
+          res.cookie("user_id", existingID);
+          res.redirect("/");
+        } else {
+          res.sendStatus(403);
+        }
+
       }
-
     }
+
+    if (notFound === true) {
+      res.sendStatus(403);
+    };
+  } else {
+    res.send("You're already logged in.")
   }
-
-  if (notFound === true) {
-    res.sendStatus(403);
-  };
-
 });
 
 //Log user out of tinyapp
@@ -235,5 +255,4 @@ app.get("/hello", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
 });
