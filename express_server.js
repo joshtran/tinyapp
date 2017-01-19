@@ -1,6 +1,6 @@
 const bodyParser = require("body-parser");
 const express = require("express");
-const cookieParser = require('cookie-parser')
+const cookieSession = require('cookie-session')
 const bcrypt = require("bcrypt");
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -8,7 +8,10 @@ const PORT = process.env.PORT || 8080;
 //Configuration
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(cookieParser());
+app.use(cookieSession({
+  name: "session",
+  secret: "somesecret"
+}));
 
 //URL Database
 const urlDatabase = {
@@ -60,32 +63,26 @@ function checkLogin(user_id) {
 }
 
 
-//Create new URL Page
+//New URL Page
 app.get("/urls/new", (req, res) => {
-  let templateVars = {
-  username: req.cookies["username"],
-  };
-  res.render("urls_new", templateVars);
+  res.render("urls_new");
 });
 
 //Registration Page
 app.get("/register", (req, res) => {
-  let templateVars = {
-  username: req.cookies["username"],
-  };
-  res.render("urls_register", templateVars);
+  res.render("urls_register");
 });
 
 //Register new user and add to users object
 app.post("/register", (req, res) => {
   const shortenedURL = generateRandomString();
-  let currentInfo = checkLogin(req.cookies["user_id"]);
+  let currentInfo = checkLogin(req.session.user_id);
   let currentLoginStatus = currentInfo.loggedIn;
 
   if (!currentLoginStatus) {
 
     let newID = generateRandomString();
-    res.cookie("user_id", newID);
+    req.session.user_id = newID;
     const newEmail = req.body.email;
     const newPass = bcrypt.hashSync(req.body.password, 10);
 
@@ -110,16 +107,13 @@ app.post("/register", (req, res) => {
 
 //Login page
 app.get("/login", (req, res) => {
-  let templateVars = {
-  username: req.cookies["username"],
-  };
-  res.render("urls_login", templateVars);
+  res.render("urls_login");
 });
 
 //Log user into tinyapp
 app.post("/login", (req, res) => {
   const shortenedURL = generateRandomString();
-  let currentInfo = checkLogin(req.cookies["user_id"]);
+  let currentInfo = checkLogin(req.session.user_id);
   let currentLoginStatus = currentInfo.loggedIn;
 
   if (!currentLoginStatus) {
@@ -139,7 +133,7 @@ app.post("/login", (req, res) => {
         notFound = false;
 
         if (bcrypt.compareSync(loginPass, existingPass)) {
-          res.cookie("user_id", existingID);
+          req.session.user_id = existingID;
           res.redirect("/");
         } else {
           res.sendStatus(403);
@@ -158,14 +152,14 @@ app.post("/login", (req, res) => {
 
 //Log user out of tinyapp
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session = null;
   res.redirect("/");
 });
 
 //Create new short URL and assign to long URL - add to urlDatabase object
 app.post("/urls/create", (req, res) => {
   const shortenedURL = generateRandomString();
-  let currentInfo = checkLogin(req.cookies["user_id"]);
+  let currentInfo = checkLogin(req.session.user_id);
   let currentLoginStatus = currentInfo.loggedIn;
 
   if (!currentLoginStatus) {
@@ -191,7 +185,7 @@ app.post("/urls/create", (req, res) => {
 
 //Delete existing short URL from urlDatabase object
 app.post("/urls/:id/delete", (req, res) => {
-  let currentInfo = checkLogin(req.cookies["user_id"]);
+  let currentInfo = checkLogin(req.session.user_id);
   let templateVars = currentInfo;
   delete currentInfo.urls[req.params.id];
   res.render("urls_index", templateVars);
@@ -199,7 +193,7 @@ app.post("/urls/:id/delete", (req, res) => {
 
 //Modify existing short URL-long URL value pair in urlDatabase object
 app.post("/urls/:id/update", (req, res) => {
-  let currentInfo = checkLogin(req.cookies["user_id"]);
+  let currentInfo = checkLogin(req.session.user_id);
   currentInfo.urls[req.params.id] = req.body.newURL;
   res.send(`Updated URL to ${req.body.newURL}`);
 });
@@ -220,13 +214,13 @@ app.get("/u/:shortURL", (req, res) => {
 
 //Index page
 app.get("/urls", (req, res) => {
-  let currentInfo = checkLogin(req.cookies["user_id"]);
+  let currentInfo = checkLogin(req.session.user_id);
   let templateVars = currentInfo;
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
-  let currentInfo = checkLogin(req.cookies["user_id"]);
+  let currentInfo = checkLogin(req.session.user_id);
 
   let currentLoginStatus = currentInfo.loggedIn;
 
