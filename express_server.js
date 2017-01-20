@@ -1,6 +1,6 @@
 const bodyParser = require("body-parser");
 const express = require("express");
-const cookieSession = require('cookie-session')
+const cookieSession = require('cookie-session');
 const bcrypt = require("bcrypt");
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,19 +22,18 @@ app.use(function(req, res, next){
 //URL Database
 const urlDatabase = {
   "test-1" : {
-      "b2xVn2": "http://www.lighthouselabs.ca",
+    "b2xVn2": "http://www.lighthouselabs.ca",
     "9sm5xK": "http://www.google.com"
   }
 };
 
 //User Database
-const users = {
+let users = {
   "test-1": {
     id: "test-1",
     email: "jondoe@example.com",
     password: bcrypt.hashSync("testpass", 10)
   },
-
 };
 
 //Generate short URL
@@ -56,18 +55,14 @@ function checkLogin(user_id) {
     currentURLs = urlDatabase[currentUser.id];
     loginStatus = true;
   };
-
   let loginInfo = {
     userID: currentID,
     urls: currentURLs,
     userEmail: currentEmail,
     loggedIn: loginStatus
   };
-
   return loginInfo;
-
 }
-
 
 //New URL Page
 app.get("/urls/new", (req, res) => {
@@ -87,33 +82,48 @@ app.get("/register", (req, res) => {
   }
 });
 
-// Register new user and add to usrs object
+// Register new user and add to users object
 app.post("/register", (req, res) => {
   const shortenedURL = generateRandomString();
-  let currentInfo = checkLogin(req.session.user_id);
-  let currentLoginStatus = currentInfo.loggedIn;
 
-  if (!currentLoginStatus) {
+  //If user not already logged in
+  if (!req.session.user_id) {
 
-    let newID = generateRandomString();
-    req.session.user_id = newID;
-    const newEmail = req.body.email;
-    const newPass = bcrypt.hashSync(req.body.password, 10);
+    //If any fields are empty, send error
+    if (!req.body.email || !req.body.password) {
+      res.status(400).send("All fields must be filled.");
+    };
 
+    let foundUserConflict = false;
+    //Loop through user database
     for (key in users) {
       let existingEmail = users[key].email;
-      if (newEmail === "" || newPass === "" || newEmail === existingEmail) {
-        res.status(400).send("All fields must be filled. If you have already registred, you can't register again.");
-      } else {
-        users[newID] = {
-          "id" : newID,
-          "email" : newEmail,
-          "password" : newPass
-          };
-        res.redirect("/");
+      let newEmail = req.body.email;
+      //Check to see if submitted email matches existing user
+      if (newEmail === existingEmail) {
+        //If user already exists, send error
+        res.status(400).send("If you have already registred, you can't register again.");
+        foundUserConflict = true;
       }
     }
+
+    //If submitted email does not exist on database, create new user
+    if (!foundUserConflict) {
+      let newID = generateRandomString();
+      req.session.user_id = newID;
+      const newPass = bcrypt.hashSync(req.body.password, 10);
+
+      users[newID] = {
+        "id" : newID,
+        "email" : req.body.email,
+        "password" : newPass
+      };
+
+      res.redirect("/");
+    }
+
   } else {
+    //If already logged in, do not allow registration
     res.send("You're already logged in.")
   }
 
@@ -209,25 +219,22 @@ app.post("/urls/:id/delete", (req, res) => {
 app.post("/urls/:id/update", (req, res) => {
   let currentInfo = checkLogin(req.session.user_id);
   currentInfo.urls[req.params.id] = req.body.newURL;
-  res.send(`Updated URL to ${req.body.newURL}`);
+  res.redirect(`/urls/${req.params.id}`);
 });
 
 //Receive shortURL and redirect to Long URL
 app.get("/u/:shortURL", (req, res) => {
-  let pageVisits = 0;
-  console.log(pageVisits);
-  res.locals.userEmail = users[req.session.user_id].email;
-  let longURL = "";
+  let longURL = undefined;
+  let urlNotFound = true;
   for (key in urlDatabase) {
     if (urlDatabase[key][req.params.shortURL]) {
       longURL = urlDatabase[key][req.params.shortURL];
-      pageVisits += 1;
-      console.log(pageVisits);
       res.redirect(longURL);
+      urlNotFound = false;
     }
   }
-  if (!longURL) {
-    res.sendStatus(400);
+  if (urlNotFound) {
+    res.status(400).send("Sorry, this tiny URL doesn't exist");
   }
 });
 
@@ -249,28 +256,32 @@ app.get("/error", (req, res) => {
 app.get("/urls/:id", (req, res) => {
   let currentInfo = checkLogin(req.session.user_id);
   let currentLoginStatus = currentInfo.loggedIn;
-  //the person who has a URL list that contains URL
   let ownerofURL = "";
-//Loop through URL database
+  let urlNotFound = true;
+
+  //Loop through URL database and find owner of URL
   for (key in urlDatabase) {
-    //Find object that has a key matching req.params.id
     if (urlDatabase[key][req.params.id]) {
-      //This is the user
       ownerofURL = key;
+      urlNotFound = false;
     }
   }
 
-  console.log("currentInfo.userID", currentInfo.userID);
-  console.log("req.session.user_id", req.session.user_id);
-  console.log("req.params.id", req.params.id);
-
-  if (!currentLoginStatus) {
-    res.status(404).redirect("/error");
+  //If URL doesn't exist, send error
+  if (urlNotFound) {
+    res.status(404).send("Sorry, this URL page doesn't exist");
   }
 
+  //If user not logged in, send error
+  if (!currentLoginStatus) {
+    res.status(401).redirect("/error");
+  }
+
+  //If user not authorized to see URL, send error
   if (ownerofURL !== req.session.user_id) {
     res.status(403).send("Sorry, this URL doesn't belong to you");
   } else {
+    //Otherwise, show them this specific URL page
     let templateVars = {
       shortURL: req.params.id,
       fullURL: urlDatabase[currentInfo.userID][req.params.id]
@@ -297,4 +308,5 @@ app.get("/hello", (req, res) => {
 });
 
 app.listen(PORT, () => {
+  console.log(`tinyApp listening on port ${PORT}!`);
 });

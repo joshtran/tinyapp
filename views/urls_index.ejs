@@ -21,7 +21,7 @@
     </tr>
     <% for (var key in urls) { %>
     <tr>
-      <td> <%= key %> : </td>
+      <td> <%= key %> </td>
       <td> <%= urls[key] %> </td>
       <td><a href="http://localhost:3000/urls/<%= key %>">Edit</a></td>
       <td><form method="POST" action="/urls/<%= key %>/delete" style="margin-bottom: 20px;">
