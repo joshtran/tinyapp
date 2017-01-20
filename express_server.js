@@ -92,6 +92,7 @@ app.post("/register", (req, res) => {
     //If any fields are empty, send error
     if (!req.body.email || !req.body.password) {
       res.status(400).send("All fields must be filled.");
+      return;
     };
 
     let foundUserConflict = false;
@@ -131,7 +132,14 @@ app.post("/register", (req, res) => {
 
 //Login page
 app.get("/login", (req, res) => {
-  res.render("urls_login");
+  if (!req.session.user_id) {
+    res.render("urls_login");
+    // res.status(401).redirect("/error");
+  } else {
+    res.redirect("/");
+  }
+
+  // res.render("urls_login");
 });
 
 //Log user into tinyapp
