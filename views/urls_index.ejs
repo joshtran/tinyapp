@@ -13,18 +13,27 @@
 
   <h1> URLs & Shortened forms</h1>
 
-    <ul>
-      <% for (var key in urls) { %>
-        <li><%= key %> : <%= urls[key] %></li>
-        <a href="http://localhost:8080/urls/<%= key %>">Edit</a>
-        <form method="POST" action="/urls/<%= key %>/delete" style="margin-bottom: 20px;">
-          <input type="submit" value="Delete">
-        </form>
-      <% }; %>
 
-    </ul>
+  <table border="1">
+    <tr>
+      <th>tinyURL</th>
+      <th colspan="3">Full URL</th>
+    </tr>
+    <% for (var key in urls) { %>
+    <tr>
+      <td> <%= key %> : </td>
+      <td> <%= urls[key] %> </td>
+      <td><a href="http://localhost:3000/urls/<%= key %>">Edit</a></td>
+      <td><form method="POST" action="/urls/<%= key %>/delete" style="margin-bottom: 20px;">
+        <input type="submit" value="Delete">
+        </form></td>
+    </tr>
+    <% }; %>
+  </table>
 
-    <a href="http://localhost:8080/urls/new">Link to shorten a new URL</a>
+
+
+    <a href="http://localhost:3000/urls/new">Shorten a new URL</a>
 
 
 </body>

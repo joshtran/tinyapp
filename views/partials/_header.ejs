@@ -1,11 +1,13 @@
-<% if (!userEmail) {%>
-<a href="/login">Login Page</a>
-<a href="/register">Registration Page</a>
-<% } else { %>
-
-<span>Logged in as: <%= userEmail %></span>
+<% if (user) {%>
+<span>Logged in as: <%= user.email %></span>
 <form action="/logout" method="POST">
   <input type="submit" value="Logout">
+  <a href="http://localhost:3000/urls">My Links</a>
 </form>
+
+<% } else { %>
+
+<a href="/login">Login Page</a>
+<a href="/register">Registration Page</a>
 
 <% } %>

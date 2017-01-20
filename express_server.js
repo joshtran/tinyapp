@@ -3,7 +3,7 @@ const express = require("express");
 const cookieSession = require('cookie-session')
 const bcrypt = require("bcrypt");
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 
 //Configuration
 app.set("view engine", "ejs");
@@ -12,6 +12,12 @@ app.use(cookieSession({
   name: "session",
   secret: "somesecret"
 }));
+
+app.use(function(req, res, next){
+  res.locals.user = users[req.session.user_id];
+  res.locals.urls = urlDatabase[req.session.user_id];
+  next();
+});
 
 //URL Database
 const urlDatabase = {
@@ -65,15 +71,23 @@ function checkLogin(user_id) {
 
 //New URL Page
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  if (!req.session.user_id) {
+    res.status(401).redirect("/error");
+  } else {
+    res.status(200).render("urls_new");
+  }
 });
 
 //Registration Page
 app.get("/register", (req, res) => {
-  res.render("urls_register");
+  if (!req.session.user_id) {
+    res.status(200).render("urls_register");
+  } else {
+    res.redirect("/");
+  }
 });
 
-//Register new user and add to users object
+// Register new user and add to usrs object
 app.post("/register", (req, res) => {
   const shortenedURL = generateRandomString();
   let currentInfo = checkLogin(req.session.user_id);
@@ -89,7 +103,7 @@ app.post("/register", (req, res) => {
     for (key in users) {
       let existingEmail = users[key].email;
       if (newEmail === "" || newPass === "" || newEmail === existingEmail) {
-        res.sendStatus(400);
+        res.status(400).send("All fields must be filled. If you have already registred, you can't register again.");
       } else {
         users[newID] = {
           "id" : newID,
@@ -136,7 +150,7 @@ app.post("/login", (req, res) => {
           req.session.user_id = existingID;
           res.redirect("/");
         } else {
-          res.sendStatus(403);
+          res.status(401).send("Email and password do not match -- please try again.");
         }
 
       }
@@ -200,10 +214,15 @@ app.post("/urls/:id/update", (req, res) => {
 
 //Receive shortURL and redirect to Long URL
 app.get("/u/:shortURL", (req, res) => {
+  let pageVisits = 0;
+  console.log(pageVisits);
+  res.locals.userEmail = users[req.session.user_id].email;
   let longURL = "";
   for (key in urlDatabase) {
     if (urlDatabase[key][req.params.shortURL]) {
       longURL = urlDatabase[key][req.params.shortURL];
+      pageVisits += 1;
+      console.log(pageVisits);
       res.redirect(longURL);
     }
   }
@@ -214,20 +233,45 @@ app.get("/u/:shortURL", (req, res) => {
 
 //Index page
 app.get("/urls", (req, res) => {
-  let currentInfo = checkLogin(req.session.user_id);
-  let templateVars = currentInfo;
-  res.render("urls_index", templateVars);
+  if (!req.session.user_id) {
+    res.status(401).redirect("/error");
+  } else {
+    res.status(200).render("urls_index");
+  }
 });
 
+//Error page
+app.get("/error", (req, res) => {
+    res.render("status_error");
+});
+
+//Edit URL Page
 app.get("/urls/:id", (req, res) => {
   let currentInfo = checkLogin(req.session.user_id);
-
   let currentLoginStatus = currentInfo.loggedIn;
+  //the person who has a URL list that contains URL
+  let ownerofURL = "";
+//Loop through URL database
+  for (key in urlDatabase) {
+    //Find object that has a key matching req.params.id
+    if (urlDatabase[key][req.params.id]) {
+      //This is the user
+      ownerofURL = key;
+    }
+  }
+
+  console.log("currentInfo.userID", currentInfo.userID);
+  console.log("req.session.user_id", req.session.user_id);
+  console.log("req.params.id", req.params.id);
 
   if (!currentLoginStatus) {
-    res.send("not logged in");
+    res.status(404).redirect("/error");
+  }
+
+  if (ownerofURL !== req.session.user_id) {
+    res.status(403).send("Sorry, this URL doesn't belong to you");
   } else {
-      let templateVars = {
+    let templateVars = {
       shortURL: req.params.id,
       fullURL: urlDatabase[currentInfo.userID][req.params.id]
     };
@@ -237,7 +281,11 @@ app.get("/urls/:id", (req, res) => {
 
 //Root and testing pages
 app.get("/", (req, res) => {
-  res.end("Hello!");
+  if (req.session.user_id) {
+    res.redirect("/urls");
+  } else {
+    res.redirect("/login")
+  }
 });
 
 app.get("/urls.json", (req, res) => {

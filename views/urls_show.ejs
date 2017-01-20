@@ -7,15 +7,21 @@
 </head>
 
 <body>
-  <h1>ShortURL: <%= shortURL %></h1>
-  <p>CurrentURL: <%= fullURL %></p>
+  <header>
+    <% include ../views/partials/_header %>
+  </header>
+  <h1>tinyURL: <a href="http://localhost:3000/u/<%= shortURL %>"> http://localhost:3000/u/<%= shortURL %></a></h1>
+  <p>CurrentURL: <a href="<%= fullURL %>"> <%= fullURL %></a></p>
 
-  <form action="/urls/<%= shortURL %>/update" method="POST">
+  <form action="/urls/<%= shortURL %>/update" method="POST" style="padding-bottom: 50px">
     <label for="newURL">Update with new URL:</label>
     <input id="newURL" type="text" name="newURL" placeholder="http://" style="width: 300px">
     <input type="submit" value="Update">
   </form>
-
+  <form method="POST" action="/urls/<%= shortURL %>/delete" style="margin-bottom: 20px;">
+        <input type="submit" value="Delete">
+        </form>
+   <a href="http://localhost:3000/urls/new">Shorten a new URL</a>
 
 </body>
 </html>
