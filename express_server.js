@@ -189,22 +189,18 @@ app.post("/urls/create", (req, res) => {
   if (!currentLoginStatus) {
     res.redirect("/login");
   } else {
-      //Add short-long URL pair to current user's associated list of URLs in urlDatabase object
-
-
       //if user's associated URL list doesn't already exist - create and add new URL
-      for (key in urlDatabase) {
-        if (!urlDatabase[currentInfo.userID]) {
-          urlDatabase[currentInfo.userID] = {};
-          urlDatabase[currentInfo.userID][shortenedURL] = req.body.longURL;
-        } else {
-          //if user's associated URL list already exists - just add new URL
-          urlDatabase[currentInfo.userID][shortenedURL] = req.body.longURL;
-        }
+    for (key in urlDatabase) {
+      if (!urlDatabase[currentInfo.userID]) {
+        urlDatabase[currentInfo.userID] = {};
+        urlDatabase[currentInfo.userID][shortenedURL] = req.body.longURL;
+      } else {
+        //if user's associated URL list already exists - just add new URL
+        urlDatabase[currentInfo.userID][shortenedURL] = req.body.longURL;
       }
-      res.redirect(`/urls/${shortenedURL}`);
+    }
+    res.redirect(`/urls/${shortenedURL}`);
   }
-
 });
 
 //Delete existing short URL from urlDatabase object
@@ -290,7 +286,6 @@ app.get("/urls/:id", (req, res) => {
   }
 });
 
-//Root and testing pages
 app.get("/", (req, res) => {
   if (req.session.user_id) {
     res.redirect("/urls");
@@ -301,10 +296,6 @@ app.get("/", (req, res) => {
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
-});
-
-app.get("/hello", (req, res) => {
-  res.end("<html><body>Hello <b>World</b></body></html>\n");
 });
 
 app.listen(PORT, () => {
